@@ -7,30 +7,78 @@
 namespace nfd {
 namespace cs {
 
-void Entry::insert(uint32_t index, uint16_t len, std::string content){
-    assert(content.length() == len);
+Entry::Entry(const Name& name) : m_name(name){
+    BOOST_ASSERT(this->isQuery());
+}
+
+Entry::Entry(shared_ptr<const Data> data) : 
+    m_name(data->getName()),
+    m_freshnessPeriod(data->getFreshnessPeriod()),
+    m_signature(data->getSignature())
+{
+    insert(data);
+    BOOST_ASSERT(!this->isQuery());
+}
+
+bool Entry::operator<(const Entry& other) const {
+    return m_name < other.getName();
+}
+
+void Entry::insert(shared_ptr<const Data> data){
+    BOOST_ASSERT(!this->isQuery());
+
+    uint32_t index = data->getContentIndex();
+    uint16_t len = data->getContentLength();
+    const ndn::Block & content = data->getContent();
+    assert(content.value_size() == len);
+    std::string dataContent(reinterpret_cast<const char*>(content.value()), content.value_size()); // fix: no copy
 
     Range range(index, index + len - 1);
     auto iter = m_contentMap.lower_bound(range);
     if(iter != m_contentMap.end() && iter->first.can_merge(range)){
-        merge(iter, range, content);
+        merge(iter, range, dataContent);
         adjust();
     }
     else{
         if(m_contentMap.empty()){
-            m_contentMap.insert({range, content});
+            m_contentMap.insert({range, dataContent});
             return;
         }
         
         -- iter;
         if(iter->first.can_merge(range)){
-            merge(iter, range, content);
+            merge(iter, range, dataContent);
             adjust();
         }
         else{
-            m_contentMap.insert({range, content});
+            m_contentMap.insert({range, dataContent});
         }
     }
+}
+
+Data* Entry::match(uint32_t index, uint16_t len) {
+	if (m_contentMap.empty()){
+		return nullptr;
+	}
+
+    Range range(index, index + len - 1);
+    auto iter = m_contentMap.lower_bound(range);
+	if(m_contentMap.size() == 1 && iter != m_contentMap.end()){
+		return nullptr;
+	}
+
+    --iter;
+	if(!iter->first.contain(range)){
+		return nullptr;
+	}
+
+    Data * data = new Data(m_name);
+    data->setFreshnessPeriod(m_freshnessPeriod);
+    size_t pos = index - iter->first.get_lowerBound();
+    data->setContent(reinterpret_cast<const uint8_t *>(&iter->second.at(pos)), len);
+    data->setSignature(m_signature); // fix?
+
+    return data;
 }
 
 void Entry::merge(CIter citer, Range range, const std::string& content){
@@ -80,13 +128,8 @@ label:
     }
 }
 
-// for test
-void Entry::print(){
-    std::cout << "============= contentMap ==============" << std::endl;
-    for(auto & item : m_contentMap){
-        std::cout << "range: [" << item.first.get_lowerBound() << ", " << item.first.get_upperBound() << "]" << std::endl;
-        std::cout << "content: " << item.second << std::endl;
-    }
+bool isQuery() const {
+    return m_contentMap.empty();
 }
 
 } // cs

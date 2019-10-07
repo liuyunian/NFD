@@ -5,19 +5,28 @@
 #include <string>
 
 #include "cs-range.hpp"
+#include "core/common.hpp"
 
 namespace nfd {
 namespace cs {
 
 class Entry {
 public:
-    Entry() = default;
+    Entry(const Name& name);
+
+    Entry(shared_ptr<const Data> data);
+
     ~Entry() = default;
 
-    void insert(uint32_t index, uint16_t len, std::string content);
+    inline Name& getName(){
+        return m_name;
+    }
 
-    // for test
-    void print();
+    void insert(shared_ptr<const Data> data);
+
+    Data* match(uint32_t index, uint16_t len);
+
+    bool operator<(const Entry& other) const;
 
 private:
     typedef std::map<Range, std::string>::const_iterator CIter;
@@ -32,7 +41,12 @@ private:
 
     void adjust();
 
+    bool isQuery() const;
+
 private:
+    Name m_name;
+    ndn::Signature m_signature;
+    time::milliseconds m_freshnessPeriod;
     std::map<Range, std::string> m_contentMap;
 };
 

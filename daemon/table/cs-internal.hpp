@@ -12,9 +12,9 @@
 namespace nfd {
 namespace cs {
 
-class CSEntry;
+class Entry;
 
-typedef std::map<ndn::Name, CSEntry> Table;
+typedef std::set<Entry> Table;
 typedef Table::const_iterator iterator;
 
 } // namespace cs

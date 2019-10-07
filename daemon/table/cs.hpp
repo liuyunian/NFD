@@ -33,7 +33,7 @@ public:
   void
   insert(const Data& data, bool isUnsolicited = false);
 
-  using AfterEraseCallback = std::function<void(size_t nErased)>;
+//   using AfterEraseCallback = std::function<void(size_t nErased)>;
 
   /** \brief asynchronously erases entries under \p prefix
    *  \param prefix name prefix of entries
@@ -41,8 +41,8 @@ public:
    *  \param cb callback to receive the actual number of erased entries; it may be empty;
    *            it may be invoked either before or after erase() returns
    */
-  void
-  erase(const Name& prefix, size_t limit, const AfterEraseCallback& cb);
+//   void
+//   erase(const Name& prefix, size_t limit, const AfterEraseCallback& cb);
 
   using HitCallback = std::function<void(const Interest&, const Data&)>;
   using MissCallback = std::function<void(const Interest&)>;
@@ -128,64 +128,64 @@ public: // configuration
   void
   enableServe(bool shouldServe);
 
-public: // enumeration
-  struct EntryFromEntryImpl
-  {
-    typedef const Entry& result_type;
+// public: // enumeration
+//   struct EntryFromEntryImpl
+//   {
+//     typedef const Entry& result_type;
 
-    const Entry&
-    operator()(const EntryImpl& entry) const
-    {
-      return entry;
-    }
-  };
+//     const Entry&
+//     operator()(const EntryImpl& entry) const
+//     {
+//       return entry;
+//     }
+//   };
 
-  /** \brief ContentStore iterator (public API)
-   */
-  typedef boost::transform_iterator<EntryFromEntryImpl, iterator, const Entry&> const_iterator;
+//   /** \brief ContentStore iterator (public API)
+//    */
+//   typedef boost::transform_iterator<EntryFromEntryImpl, iterator, const Entry&> const_iterator;
 
-  const_iterator
-  begin() const
-  {
-    return boost::make_transform_iterator(m_table.begin(), EntryFromEntryImpl());
-  }
+//   const_iterator
+//   begin() const
+//   {
+//     return boost::make_transform_iterator(m_table.begin(), EntryFromEntryImpl());
+//   }
 
-  const_iterator
-  end() const
-  {
-    return boost::make_transform_iterator(m_table.end(), EntryFromEntryImpl());
-  }
+//   const_iterator
+//   end() const
+//   {
+//     return boost::make_transform_iterator(m_table.end(), EntryFromEntryImpl());
+//   }
 
 private: // find
   /** \brief find leftmost match in [first,last)
    *  \return the leftmost match, or last if not found
    */
-  iterator
-  findLeftmost(const Interest& interest, iterator left, iterator right) const;
+//   iterator
+//   findLeftmost(const Interest& interest, iterator left, iterator right) const;
 
   /** \brief find rightmost match in [first,last)
    *  \return the rightmost match, or last if not found
    */
-  iterator
-  findRightmost(const Interest& interest, iterator first, iterator last) const;
+//   iterator
+//   findRightmost(const Interest& interest, iterator first, iterator last) const;
 
   /** \brief find rightmost match among entries with exact Names in [first,last)
    *  \return the rightmost match, or last if not found
    */
-  iterator
-  findRightmostAmongExact(const Interest& interest, iterator first, iterator last) const;
+//   iterator
+//   findRightmostAmongExact(const Interest& interest, iterator first, iterator last) const;
 
 //   void
 //   setPolicyImpl(unique_ptr<Policy> policy);
 
-PUBLIC_WITH_TESTS_ELSE_PRIVATE:
-  void
-  dump();
+// PUBLIC_WITH_TESTS_ELSE_PRIVATE:
+//   void
+//   dump();
 
 private:
   Table m_table;
 //   unique_ptr<Policy> m_policy;
-  signal::ScopedConnection m_beforeEvictConnection;
+//   signal::ScopedConnection m_beforeEvictConnection;
 
   bool m_shouldAdmit = true; ///< if false, no Data will be admitted
   bool m_shouldServe = true; ///< if false, all lookups will miss
