@@ -1,78 +1,93 @@
-/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
-/**
- * Copyright (c) 2014-2017,  Regents of the University of California,
- *                           Arizona Board of Regents,
- *                           Colorado State University,
- *                           University Pierre & Marie Curie, Sorbonne University,
- *                           Washington University in St. Louis,
- *                           Beijing Institute of Technology,
- *                           The University of Memphis.
- *
- * This file is part of NFD (Named Data Networking Forwarding Daemon).
- * See AUTHORS.md for complete list of NFD authors and contributors.
- *
- * NFD is free software: you can redistribute it and/or modify it under the terms
- * of the GNU General Public License as published by the Free Software Foundation,
- * either version 3 of the License, or (at your option) any later version.
- *
- * NFD is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
- * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
- * PURPOSE.  See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * NFD, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
- */
+#include <iostream>
+
+#include <assert.h>
 
 #include "cs-entry.hpp"
 
 namespace nfd {
 namespace cs {
 
-void
-Entry::setData(shared_ptr<const Data> data, bool isUnsolicited)
-{
-  m_data = data;
-  m_isUnsolicited = isUnsolicited;
+void Entry::insert(uint32_t index, uint16_t len, std::string content){
+    assert(content.length() == len);
 
-  updateStaleTime();
+    Range range(index, index + len - 1);
+    auto iter = m_contentMap.lower_bound(range);
+    if(iter != m_contentMap.end() && iter->first.can_merge(range)){
+        merge(iter, range, content);
+        adjust();
+    }
+    else{
+        if(m_contentMap.empty()){
+            m_contentMap.insert({range, content});
+            return;
+        }
+        
+        -- iter;
+        if(iter->first.can_merge(range)){
+            merge(iter, range, content);
+            adjust();
+        }
+        else{
+            m_contentMap.insert({range, content});
+        }
+    }
 }
 
-bool
-Entry::isStale() const
-{
-  BOOST_ASSERT(this->hasData());
-  return m_staleTime < time::steady_clock::now();
+void Entry::merge(CIter citer, Range range, const std::string& content){
+    if(citer->first.contain(range)){
+        return;
+    }
+    else{
+        Range mergeRange = citer->first.merge(range);
+        std::string mergeContent = mergeRange.get_lowerBound() == citer->first.get_lowerBound() ? 
+            merge_content(mergeRange, citer->first, citer->second, content) : 
+            merge_content(mergeRange, range, content, citer->second);
+        m_contentMap.insert({mergeRange, mergeContent});
+
+        m_contentMap.erase(citer);
+    }
 }
 
-void
-Entry::updateStaleTime()
-{
-  BOOST_ASSERT(this->hasData());
-  m_staleTime = time::steady_clock::now() + time::milliseconds(m_data->getFreshnessPeriod());
+void Entry::merge(CIter citer1, CIter citer2){
+    merge(citer1, citer2->first, citer2->second);
+    m_contentMap.erase(citer2);
 }
 
-bool
-Entry::canSatisfy(const Interest& interest) const
-{
-  BOOST_ASSERT(this->hasData());
-  if (!interest.matchesData(*m_data)) {
-    return false;
-  }
+std::string Entry::merge_content(Range mergeRange, Range range, const std::string& firstContent, const std::string& secondContent){
+    std::string mergeContent(std::move(firstContent));
+    size_t len = mergeRange.get_upperBound() - range.get_upperBound();
+    if(len > 0){
+        mergeContent.append(secondContent, secondContent.size()-len, len);
+    }
 
-  if (interest.getMustBeFresh() == static_cast<int>(true) && this->isStale()) {
-    return false;
-  }
-
-  return true;
+    assert(mergeContent.size() == mergeRange.length());
+    return mergeContent;
 }
 
-void
-Entry::reset()
-{
-  m_data.reset();
-  m_isUnsolicited = false;
-  m_staleTime = time::steady_clock::TimePoint();
+void Entry::adjust(){
+label:
+    for(auto iter = m_contentMap.begin(); iter != m_contentMap.end(); ){
+        auto curIter = iter;
+        auto nextIter = ++ iter;
+        if(iter == m_contentMap.end()){
+            return;
+        }
+
+        if(curIter->first.can_merge(nextIter->first)){
+            merge(curIter, nextIter);
+            goto label;
+        }
+    }
 }
 
-} // namespace cs
-} // namespace nfd
+// for test
+void Entry::print(){
+    std::cout << "============= contentMap ==============" << std::endl;
+    for(auto & item : m_contentMap){
+        std::cout << "range: [" << item.first.get_lowerBound() << ", " << item.first.get_upperBound() << "]" << std::endl;
+        std::cout << "content: " << item.second << std::endl;
+    }
+}
+
+} // cs
+} // nfd

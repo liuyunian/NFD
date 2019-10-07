@@ -37,53 +37,59 @@ NDN_CXX_ASSERT_FORWARD_ITERATOR(Cs::const_iterator);
 
 NFD_LOG_INIT(ContentStore);
 
-static unique_ptr<Policy>
-makeDefaultPolicy()
-{
-  return Policy::create("lru");
-}
+// static unique_ptr<Policy>
+// makeDefaultPolicy()
+// {
+//   return Policy::create("lru");
+// }
 
 Cs::Cs(size_t nMaxPackets)
 {
-  setPolicyImpl(makeDefaultPolicy());
-  m_policy->setLimit(nMaxPackets);
+//   setPolicyImpl(makeDefaultPolicy());
+//   m_policy->setLimit(nMaxPackets);
 }
 
 void
 Cs::insert(const Data& data, bool isUnsolicited)
 {
-  if (!m_shouldAdmit || m_policy->getLimit() == 0) {
-    return;
-  }
-  NFD_LOG_DEBUG("insert " << data.getName());
+//   if (!m_shouldAdmit || m_policy->getLimit() == 0) {
+//     return;
+//   }
 
-  // recognize CachePolicy
-  shared_ptr<lp::CachePolicyTag> tag = data.getTag<lp::CachePolicyTag>();
-  if (tag != nullptr) {
-    lp::CachePolicyType policy = tag->get().getPolicy();
-    if (policy == lp::CachePolicyType::NO_CACHE) {
-      return;
+    if(!m_shouldAdmit){
+        return;
     }
-  }
+    NFD_LOG_DEBUG("insert " << data.getName());
 
-  iterator it;
-  bool isNewEntry = false;
-  std::tie(it, isNewEntry) = m_table.emplace(data.shared_from_this(), isUnsolicited);
-  EntryImpl& entry = const_cast<EntryImpl&>(*it);
+  // recognize CachePolicy -- 确认缓存策略
+//   shared_ptr<lp::CachePolicyTag> tag = data.getTag<lp::CachePolicyTag>();
+//   if (tag != nullptr) {
+//     lp::CachePolicyType policy = tag->get().getPolicy();
+//     if (policy == lp::CachePolicyType::NO_CACHE) {
+//       return;
+//     }
+//   }
 
-  entry.updateStaleTime();
+//   iterator it;
+//   bool isNewEntry = false;
+//   std::tie(it, isNewEntry) = m_table.emplace(data.shared_from_this(), isUnsolicited);
+//   EntryImpl& entry = const_cast<EntryImpl&>(*it);
 
-  if (!isNewEntry) { // existing entry
-    // XXX This doesn't forbid unsolicited Data from refreshing a solicited entry.
-    if (entry.isUnsolicited() && !isUnsolicited) {
-      entry.unsetUnsolicited();
-    }
+//   entry.updateStaleTime();
 
-    m_policy->afterRefresh(it);
-  }
-  else {
-    m_policy->afterInsert(it);
-  }
+//   if (!isNewEntry) { // existing entry
+//     // XXX This doesn't forbid unsolicited Data from refreshing a solicited entry.
+//     if (entry.isUnsolicited() && !isUnsolicited) {
+//       entry.unsetUnsolicited();
+//     }
+
+//     m_policy->afterRefresh(it);
+//   }
+//   else {
+//     m_policy->afterInsert(it);
+//   }
+
+    
 }
 
 void
@@ -202,28 +208,28 @@ Cs::dump()
   }
 }
 
-void
-Cs::setPolicy(unique_ptr<Policy> policy)
-{
-  BOOST_ASSERT(policy != nullptr);
-  BOOST_ASSERT(m_policy != nullptr);
-  size_t limit = m_policy->getLimit();
-  this->setPolicyImpl(std::move(policy));
-  m_policy->setLimit(limit);
-}
+// void
+// Cs::setPolicy(unique_ptr<Policy> policy)
+// {
+//   BOOST_ASSERT(policy != nullptr);
+//   BOOST_ASSERT(m_policy != nullptr);
+//   size_t limit = m_policy->getLimit();
+//   this->setPolicyImpl(std::move(policy));
+//   m_policy->setLimit(limit);
+// }
 
-void
-Cs::setPolicyImpl(unique_ptr<Policy> policy)
-{
-  NFD_LOG_DEBUG("set-policy " << policy->getName());
-  m_policy = std::move(policy);
-  m_beforeEvictConnection = m_policy->beforeEvict.connect([this] (iterator it) {
-      m_table.erase(it);
-    });
+// void
+// Cs::setPolicyImpl(unique_ptr<Policy> policy)
+// {
+//   NFD_LOG_DEBUG("set-policy " << policy->getName());
+//   m_policy = std::move(policy);
+//   m_beforeEvictConnection = m_policy->beforeEvict.connect([this] (iterator it) {
+//       m_table.erase(it);
+//     });
 
-  m_policy->setCs(this);
-  BOOST_ASSERT(m_policy->getCs() == this);
-}
+//   m_policy->setCs(this);
+//   BOOST_ASSERT(m_policy->getCs() == this);
+// }
 
 void
 Cs::enableAdmit(bool shouldAdmit)

@@ -1,34 +1,11 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
-/*
- * Copyright (c) 2014-2019,  Regents of the University of California,
- *                           Arizona Board of Regents,
- *                           Colorado State University,
- *                           University Pierre & Marie Curie, Sorbonne University,
- *                           Washington University in St. Louis,
- *                           Beijing Institute of Technology,
- *                           The University of Memphis.
- *
- * This file is part of NFD (Named Data Networking Forwarding Daemon).
- * See AUTHORS.md for complete list of NFD authors and contributors.
- *
- * NFD is free software: you can redistribute it and/or modify it under the terms
- * of the GNU General Public License as published by the Free Software Foundation,
- * either version 3 of the License, or (at your option) any later version.
- *
- * NFD is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
- * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
- * PURPOSE.  See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * NFD, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
- */
 
 #ifndef NFD_DAEMON_TABLE_CS_HPP
 #define NFD_DAEMON_TABLE_CS_HPP
 
-#include "cs-policy.hpp"
+// #include "cs-policy.hpp"
 #include "cs-internal.hpp"
-#include "cs-entry-impl.hpp"
+#include "cs-entry.hpp"
 
 #include <boost/iterator/transform_iterator.hpp>
 
@@ -93,33 +70,33 @@ public:
 public: // configuration
   /** \brief get capacity (in number of packets)
    */
-  size_t
-  getLimit() const
-  {
-    return m_policy->getLimit();
-  }
+//   size_t
+//   getLimit() const
+//   {
+//     return m_policy->getLimit();
+//   }
 
   /** \brief change capacity (in number of packets)
    */
-  void
-  setLimit(size_t nMaxPackets)
-  {
-    return m_policy->setLimit(nMaxPackets);
-  }
+//   void
+//   setLimit(size_t nMaxPackets)
+//   {
+//     return m_policy->setLimit(nMaxPackets);
+//   }
 
   /** \brief get replacement policy
    */
-  Policy*
-  getPolicy() const
-  {
-    return m_policy.get();
-  }
+//   Policy*
+//   getPolicy() const
+//   {
+//     return m_policy.get();
+//   }
 
   /** \brief change replacement policy
    *  \pre size() == 0
    */
-  void
-  setPolicy(unique_ptr<Policy> policy);
+//   void
+//   setPolicy(unique_ptr<Policy> policy);
 
   /** \brief get CS_ENABLE_ADMIT flag
    *  \sa https://redmine.named-data.net/projects/nfd/wiki/CsMgmt#Update-config
@@ -198,8 +175,8 @@ private: // find
   iterator
   findRightmostAmongExact(const Interest& interest, iterator first, iterator last) const;
 
-  void
-  setPolicyImpl(unique_ptr<Policy> policy);
+//   void
+//   setPolicyImpl(unique_ptr<Policy> policy);
 
 PUBLIC_WITH_TESTS_ELSE_PRIVATE:
   void
@@ -207,7 +184,7 @@ PUBLIC_WITH_TESTS_ELSE_PRIVATE:
 
 private:
   Table m_table;
-  unique_ptr<Policy> m_policy;
+//   unique_ptr<Policy> m_policy;
   signal::ScopedConnection m_beforeEvictConnection;
 
   bool m_shouldAdmit = true; ///< if false, no Data will be admitted
