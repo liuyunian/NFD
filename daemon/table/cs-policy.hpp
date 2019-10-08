@@ -27,7 +27,7 @@
 #define NFD_DAEMON_TABLE_CS_POLICY_HPP
 
 #include "cs-internal.hpp"
-#include "cs-entry-impl.hpp"
+#include "cs-entry.hpp"
 
 namespace nfd {
 namespace cs {

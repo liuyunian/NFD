@@ -14,12 +14,22 @@ class Entry {
 public:
     Entry(const Name& name);
 
-    Entry(shared_ptr<const Data> data);
+    explicit Entry(shared_ptr<const Data> data, bool isUnsolicited);
 
     ~Entry() = default;
 
-    inline Name& getName(){
+    inline const Name& getName() const {
         return m_name;
+    }
+
+    inline bool isUnsolicited() const {
+        BOOST_ASSERT(!this->isQuery());
+        return m_isUnsolicited;
+    }
+
+    inline void unsetUnsolicited(){
+        BOOST_ASSERT(!this->isQuery());
+        m_isUnsolicited = false;
     }
 
     void insert(shared_ptr<const Data> data);
@@ -45,6 +55,7 @@ private:
 
 private:
     Name m_name;
+    bool m_isUnsolicited = false;
     ndn::Signature m_signature;
     time::milliseconds m_freshnessPeriod;
     std::map<Range, std::string> m_contentMap;

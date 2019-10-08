@@ -3,7 +3,7 @@
 #ifndef NFD_DAEMON_TABLE_CS_HPP
 #define NFD_DAEMON_TABLE_CS_HPP
 
-// #include "cs-policy.hpp"
+#include "cs-policy.hpp"
 #include "cs-internal.hpp"
 #include "cs-entry.hpp"
 
@@ -12,7 +12,7 @@
 namespace nfd {
 namespace cs {
 
-/** \brief implements the Content Store
+/** \brief implements the Content Store -- fix
  *
  *  This Content Store implementation consists of a Table and a replacement policy.
  *
@@ -25,15 +25,16 @@ namespace cs {
 class Cs : noncopyable
 {
 public:
-  explicit
-  Cs(size_t nMaxPackets = 10);
+//   explicit
+//   Cs(size_t nMaxPackets = 10);
+    explicit Cs(size_t nMaxItems = 10);
 
   /** \brief inserts a Data packet
    */
   void
   insert(const Data& data, bool isUnsolicited = false);
 
-//   using AfterEraseCallback = std::function<void(size_t nErased)>;
+  using AfterEraseCallback = std::function<void(size_t nErased)>;
 
   /** \brief asynchronously erases entries under \p prefix
    *  \param prefix name prefix of entries
@@ -41,8 +42,8 @@ public:
    *  \param cb callback to receive the actual number of erased entries; it may be empty;
    *            it may be invoked either before or after erase() returns
    */
-//   void
-//   erase(const Name& prefix, size_t limit, const AfterEraseCallback& cb);
+  void
+  erase(const Name& prefix, size_t limit, const AfterEraseCallback& cb);
 
   using HitCallback = std::function<void(const Interest&, const Data&)>;
   using MissCallback = std::function<void(const Interest&)>;
@@ -70,11 +71,11 @@ public:
 public: // configuration
   /** \brief get capacity (in number of packets)
    */
-//   size_t
-//   getLimit() const
-//   {
-//     return m_policy->getLimit();
-//   }
+  size_t
+  getLimit() const
+  {
+    return m_policy->getLimit();
+  }
 
   /** \brief change capacity (in number of packets)
    */
@@ -84,19 +85,25 @@ public: // configuration
 //     return m_policy->setLimit(nMaxPackets);
 //   }
 
+    void
+    setLimit(size_t nMaxItems)
+    {
+        return m_policy->setLimit(nMaxItems);
+    }
+
   /** \brief get replacement policy
    */
-//   Policy*
-//   getPolicy() const
-//   {
-//     return m_policy.get();
-//   }
+  Policy*
+  getPolicy() const
+  {
+    return m_policy.get();
+  }
 
   /** \brief change replacement policy
    *  \pre size() == 0
    */
-//   void
-//   setPolicy(unique_ptr<Policy> policy);
+  void
+  setPolicy(unique_ptr<Policy> policy);
 
   /** \brief get CS_ENABLE_ADMIT flag
    *  \sa https://redmine.named-data.net/projects/nfd/wiki/CsMgmt#Update-config
@@ -128,33 +135,33 @@ public: // configuration
   void
   enableServe(bool shouldServe);
 
-// public: // enumeration
-//   struct EntryFromEntryImpl
-//   {
-//     typedef const Entry& result_type;
+public: // enumeration
+  struct EntryFromEntryImpl
+  {
+    typedef const Entry& result_type;
 
-//     const Entry&
-//     operator()(const EntryImpl& entry) const
-//     {
-//       return entry;
-//     }
-//   };
+    const Entry&
+    operator()(const Entry& entry) const // operator()(const EntryImpl& entry) const
+    {
+      return entry;
+    }
+  };
 
-//   /** \brief ContentStore iterator (public API)
-//    */
-//   typedef boost::transform_iterator<EntryFromEntryImpl, iterator, const Entry&> const_iterator;
+  /** \brief ContentStore iterator (public API)
+   */
+  typedef boost::transform_iterator<EntryFromEntryImpl, iterator, const Entry&> const_iterator;
 
-//   const_iterator
-//   begin() const
-//   {
-//     return boost::make_transform_iterator(m_table.begin(), EntryFromEntryImpl());
-//   }
+  const_iterator
+  begin() const
+  {
+    return boost::make_transform_iterator(m_table.begin(), EntryFromEntryImpl());
+  }
 
-//   const_iterator
-//   end() const
-//   {
-//     return boost::make_transform_iterator(m_table.end(), EntryFromEntryImpl());
-//   }
+  const_iterator
+  end() const
+  {
+    return boost::make_transform_iterator(m_table.end(), EntryFromEntryImpl());
+  }
 
 private: // find
   /** \brief find leftmost match in [first,last)
@@ -175,8 +182,8 @@ private: // find
 //   iterator
 //   findRightmostAmongExact(const Interest& interest, iterator first, iterator last) const;
 
-//   void
-//   setPolicyImpl(unique_ptr<Policy> policy);
+  void
+  setPolicyImpl(unique_ptr<Policy> policy);
 
 // PUBLIC_WITH_TESTS_ELSE_PRIVATE:
 //   void
@@ -184,8 +191,8 @@ private: // find
 
 private:
   Table m_table;
-//   unique_ptr<Policy> m_policy;
-//   signal::ScopedConnection m_beforeEvictConnection;
+  unique_ptr<Policy> m_policy;
+  signal::ScopedConnection m_beforeEvictConnection;
 
   bool m_shouldAdmit = true; ///< if false, no Data will be admitted
   bool m_shouldServe = true; ///< if false, all lookups will miss

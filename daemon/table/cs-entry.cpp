@@ -11,8 +11,9 @@ Entry::Entry(const Name& name) : m_name(name){
     BOOST_ASSERT(this->isQuery());
 }
 
-Entry::Entry(shared_ptr<const Data> data) : 
+Entry::Entry(shared_ptr<const Data> data, bool isUnsolicited) : 
     m_name(data->getName()),
+    m_isUnsolicited(isUnsolicited),
     m_freshnessPeriod(data->getFreshnessPeriod()),
     m_signature(data->getSignature())
 {
@@ -128,7 +129,7 @@ label:
     }
 }
 
-bool isQuery() const {
+bool Entry::isQuery() const {
     return m_contentMap.empty();
 }
 
