@@ -4,7 +4,7 @@
 #include <map>
 #include <string>
 
-#include "cs-range.hpp"
+#include "content-range.hpp"
 #include "core/common.hpp"
 
 namespace nfd {
@@ -39,15 +39,15 @@ public:
     bool operator<(const Entry& other) const;
 
 private:
-    typedef std::map<Range, std::string>::const_iterator CIter;
+    typedef std::map<ContentRange, std::string>::const_iterator CIter;
 
-    // typedef std::pair<Range, std::string> ContentEntry;
+    // typedef std::pair<ContentRange, std::string> ContentEntry;
 
-    void merge(CIter citer, Range range, const std::string& content);
+    void merge(CIter citer, ContentRange range, const std::string& content);
 
     void merge(CIter citer1, CIter citer2);
 
-    std::string merge_content(Range mergeRange, Range range, const std::string& firstContent, const std::string& secondContent);
+    std::string merge_content(ContentRange mergeRange, ContentRange range, const std::string& firstContent, const std::string& secondContent);
 
     void adjust();
 
@@ -58,7 +58,7 @@ private:
     bool m_isUnsolicited = false;
     ndn::Signature m_signature;
     time::milliseconds m_freshnessPeriod;
-    std::map<Range, std::string> m_contentMap;
+    std::map<ContentRange, std::string> m_contentMap;
 };
 
 } // cs

@@ -45,11 +45,21 @@ public:
     return *m_interest;
   }
 
+    uint32_t getContentIndex() const {
+        return m_contentIndex;
+    }
+
+    uint16_t getContentLength() const {
+        return m_contentLength;
+    }
+
   void
   update(const Interest& interest);
 
 private:
   shared_ptr<const Interest> m_interest;
+  uint32_t m_contentIndex = 0;
+  uint16_t m_contentLength = 0;
 };
 
 } // namespace pit

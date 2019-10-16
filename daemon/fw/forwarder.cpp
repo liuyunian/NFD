@@ -1,27 +1,4 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
-/*
- * Copyright (c) 2014-2019,  Regents of the University of California,
- *                           Arizona Board of Regents,
- *                           Colorado State University,
- *                           University Pierre & Marie Curie, Sorbonne University,
- *                           Washington University in St. Louis,
- *                           Beijing Institute of Technology,
- *                           The University of Memphis.
- *
- * This file is part of NFD (Named Data Networking Forwarding Daemon).
- * See AUTHORS.md for complete list of NFD authors and contributors.
- *
- * NFD is free software: you can redistribute it and/or modify it under the terms
- * of the GNU General Public License as published by the Free Software Foundation,
- * either version 3 of the License, or (at your option) any later version.
- *
- * NFD is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
- * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
- * PURPOSE.  See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * NFD, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
- */
 
 #include "forwarder.hpp"
 
@@ -312,47 +289,102 @@ Forwarder::onIncomingData(const FaceEndpoint& ingress, const Data& data)
   // when more than one PIT entry is matched, trigger strategy: before satisfy Interest,
   // and send Data to all matched out faces
   else {
-    std::set<std::pair<Face*, EndpointId>> pendingDownstreams;
+    // std::set<std::pair<Face*, EndpointId>> pendingDownstreams;
+
+    // auto now = time::steady_clock::now();
+
+    // for (const auto& pitEntry : pitMatches) {
+    //   NFD_LOG_DEBUG("onIncomingData matching=" << pitEntry->getName());
+
+    //   // remember pending downstreams
+    //   for (const pit::InRecord& inRecord : pitEntry->getInRecords()) {
+    //     if (inRecord.getExpiry() > now) {
+    //       pendingDownstreams.emplace(&inRecord.getFace(), inRecord.getEndpointId());
+    //     }
+    //   }
+
+    //   // set PIT expiry timer to now
+    //   this->setExpiryTimer(pitEntry, 0_ms);
+
+    //   // invoke PIT satisfy callback
+    //   this->dispatchToStrategy(*pitEntry,
+    //     [&] (fw::Strategy& strategy) { strategy.beforeSatisfyInterest(pitEntry, ingress, data); });
+
+    //   // mark PIT satisfied
+    //   pitEntry->isSatisfied = true;
+    //   pitEntry->dataFreshnessPeriod = data.getFreshnessPeriod();
+
+    //   // Dead Nonce List insert if necessary (for out-record of inFace)
+    //   this->insertDeadNonceList(*pitEntry, &ingress.face);
+
+    //   // clear PIT entry's in and out records
+    //   pitEntry->clearInRecords();
+    //   pitEntry->deleteOutRecord(ingress.face, ingress.endpoint);
+    // }
+
+    // // foreach pending downstream
+    // for (const auto& pendingDownstream : pendingDownstreams) {
+    //   if (pendingDownstream.first->getId() == ingress.face.getId() &&
+    //       pendingDownstream.second == ingress.endpoint &&
+    //       pendingDownstream.first->getLinkType() != ndn::nfd::LINK_TYPE_AD_HOC) {
+    //     continue;
+    //   }
+    //   // goto outgoing Data pipeline
+    //   this->onOutgoingData(data, FaceEndpoint(*pendingDownstream.first, pendingDownstream.second));
+    // }
+
     auto now = time::steady_clock::now();
 
     for (const auto& pitEntry : pitMatches) {
-      NFD_LOG_DEBUG("onIncomingData matching=" << pitEntry->getName());
+        NFD_LOG_DEBUG("onIncomingData matching=" << pitEntry->getName());
 
-      // remember pending downstreams
-      for (const pit::InRecord& inRecord : pitEntry->getInRecords()) {
-        if (inRecord.getExpiry() > now) {
-          pendingDownstreams.emplace(&inRecord.getFace(), inRecord.getEndpointId());
+        // remember pending downstreams
+        for (const pit::InRecord& inRecord : pitEntry->getInRecords()) {
+            if (inRecord.getExpiry() > now) {
+                if (inRecord.getFace().getId() == ingress.face.getId() &&
+                    inRecord.getEndpointId() == ingress.endpoint &&
+                    inRecord.getFace().getLinkType() != ndn::nfd::LINK_TYPE_AD_HOC) {
+                    continue;
+                }
+
+                if(!inRecord.getInterest().matchesData(data)){ // can't match index & length
+                    uint32_t index = inRecord.getContentIndex();
+                    uint16_t length = inRecord.getContentLength();
+
+                    Data tempData(data);
+                    tempData.setContentIndex(index);
+                    tempData.setContentLength(length);
+
+                    size_t offset = index - pitEntry->getInterest().getContentIndex();
+                    const ndn::Block& content = data.getContent();
+                    tempData.setContent(content.value() + offset, static_cast<size_t>(length));
+
+                    // goto outgoing Data pipeline
+                    this->onOutgoingData(tempData, FaceEndpoint(inRecord.getFace(), inRecord.getEndpointId()));
+                }
+                else{
+                    this->onOutgoingData(data, FaceEndpoint(inRecord.getFace(), inRecord.getEndpointId()));
+                }
+            }
         }
-      }
 
-      // set PIT expiry timer to now
-      this->setExpiryTimer(pitEntry, 0_ms);
+        // set PIT expiry timer to now
+        this->setExpiryTimer(pitEntry, 0_ms);
 
-      // invoke PIT satisfy callback
-      this->dispatchToStrategy(*pitEntry,
-        [&] (fw::Strategy& strategy) { strategy.beforeSatisfyInterest(pitEntry, ingress, data); });
+        // invoke PIT satisfy callback
+        this->dispatchToStrategy(*pitEntry,
+            [&] (fw::Strategy& strategy) { strategy.beforeSatisfyInterest(pitEntry, ingress, data); });
 
-      // mark PIT satisfied
-      pitEntry->isSatisfied = true;
-      pitEntry->dataFreshnessPeriod = data.getFreshnessPeriod();
+        // mark PIT satisfied
+        pitEntry->isSatisfied = true;
+        pitEntry->dataFreshnessPeriod = data.getFreshnessPeriod();
 
-      // Dead Nonce List insert if necessary (for out-record of inFace)
-      this->insertDeadNonceList(*pitEntry, &ingress.face);
+        // Dead Nonce List insert if necessary (for out-record of inFace)
+        this->insertDeadNonceList(*pitEntry, &ingress.face);
 
-      // clear PIT entry's in and out records
-      pitEntry->clearInRecords();
-      pitEntry->deleteOutRecord(ingress.face, ingress.endpoint);
-    }
-
-    // foreach pending downstream
-    for (const auto& pendingDownstream : pendingDownstreams) {
-      if (pendingDownstream.first->getId() == ingress.face.getId() &&
-          pendingDownstream.second == ingress.endpoint &&
-          pendingDownstream.first->getLinkType() != ndn::nfd::LINK_TYPE_AD_HOC) {
-        continue;
-      }
-      // goto outgoing Data pipeline
-      this->onOutgoingData(data, FaceEndpoint(*pendingDownstream.first, pendingDownstream.second));
+        // clear PIT entry's in and out records
+        pitEntry->clearInRecords();
+        pitEntry->deleteOutRecord(ingress.face, ingress.endpoint);
     }
   }
 }

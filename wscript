@@ -126,7 +126,7 @@ def configure(conf):
                              errmsg='not found, but required for Ethernet face support. '
                                     'Specify --without-libpcap to disable Ethernet face support.')
 
-    # conf.checkWebsocket()
+    conf.checkWebsocket()
 
     conf.check_compiler_flags()
 

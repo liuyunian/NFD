@@ -34,7 +34,7 @@ void Entry::insert(shared_ptr<const Data> data){
     assert(content.value_size() == len);
     std::string dataContent(reinterpret_cast<const char*>(content.value()), content.value_size()); // fix: no copy
 
-    Range range(index, index + len - 1);
+    ContentRange range(index, len);
     auto iter = m_contentMap.lower_bound(range);
     if(iter != m_contentMap.end() && iter->first.can_merge(range)){
         merge(iter, range, dataContent);
@@ -62,7 +62,7 @@ Data* Entry::match(uint32_t index, uint16_t len) {
 		return nullptr;
 	}
 
-    Range range(index, index + len - 1);
+    ContentRange range(index, len);
     auto iter = m_contentMap.lower_bound(range);
 	if(m_contentMap.size() == 1 && iter != m_contentMap.end()){
 		return nullptr;
@@ -82,12 +82,12 @@ Data* Entry::match(uint32_t index, uint16_t len) {
     return data;
 }
 
-void Entry::merge(CIter citer, Range range, const std::string& content){
+void Entry::merge(CIter citer, ContentRange range, const std::string& content){
     if(citer->first.contain(range)){
         return;
     }
     else{
-        Range mergeRange = citer->first.merge(range);
+        ContentRange mergeRange = citer->first.merge(range);
         std::string mergeContent = mergeRange.get_lowerBound() == citer->first.get_lowerBound() ? 
             merge_content(mergeRange, citer->first, citer->second, content) : 
             merge_content(mergeRange, range, content, citer->second);
@@ -102,7 +102,7 @@ void Entry::merge(CIter citer1, CIter citer2){
     m_contentMap.erase(citer2);
 }
 
-std::string Entry::merge_content(Range mergeRange, Range range, const std::string& firstContent, const std::string& secondContent){
+std::string Entry::merge_content(ContentRange mergeRange, ContentRange range, const std::string& firstContent, const std::string& secondContent){
     std::string mergeContent(std::move(firstContent));
     size_t len = mergeRange.get_upperBound() - range.get_upperBound();
     if(len > 0){

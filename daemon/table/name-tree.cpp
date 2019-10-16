@@ -47,7 +47,7 @@ NameTree::lookup(const Name& name, size_t prefixLen)
   BOOST_ASSERT(prefixLen <= name.size());
   BOOST_ASSERT(prefixLen <= getMaxDepth());
 
-  HashSequence hashes = computeHashes(name, prefixLen);
+  HashSequence hashes = computeHashes(name, prefixLen); // 计算哈希值
   const Node* node = nullptr;
   Entry* parent = nullptr;
 
