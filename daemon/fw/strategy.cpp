@@ -205,37 +205,42 @@ Strategy::sendDataToAll(const shared_ptr<pit::Entry>& pitEntry,
 //     this->sendData(pitEntry, data, FaceEndpoint(*pendingDownstream.first, pendingDownstream.second));
 //   }
 
-    auto now = time::steady_clock::now();
+  std::set<std::tuple<Face*, EndpointId, std::shared_ptr<const Interest>>> pendingDownstreams;
+  auto now = time::steady_clock::now();
 
-    // remember pending downstreams
-    for (const pit::InRecord& inRecord : pitEntry->getInRecords()) {
-        if (inRecord.getExpiry() > now) {
-            if (inRecord.getFace().getId() == ingress.face.getId() &&
-                inRecord.getEndpointId() == ingress.endpoint &&
-                inRecord.getFace().getLinkType() != ndn::nfd::LINK_TYPE_AD_HOC) {
-
-                continue;
-            }
-
-            if(!inRecord.getInterest().matchesData(data)){ // can't match index & length
-                uint32_t index = inRecord.getContentIndex();
-                uint16_t length = inRecord.getContentLength();
-
-                Data tempData(data);
-                tempData.setContentIndex(index);
-                tempData.setContentLength(length);
-
-                size_t offset = index - pitEntry->getInterest().getContentIndex();
-                const ndn::Block& content = data.getContent();
-                tempData.setContent(content.value() + offset, static_cast<size_t>(length));
-
-                this->sendData(pitEntry, tempData, FaceEndpoint(inRecord.getFace(), inRecord.getEndpointId()));
-            }
-            else{
-                this->sendData(pitEntry, data, FaceEndpoint(inRecord.getFace(), inRecord.getEndpointId()));
-            }
-        }
+  // remember pending downstreams
+  for (const pit::InRecord& inRecord : pitEntry->getInRecords()) {
+    if (inRecord.getExpiry() > now) {
+      if (inRecord.getFace().getId() == ingress.face.getId() &&
+          inRecord.getEndpointId() == ingress.endpoint &&
+          inRecord.getFace().getLinkType() != ndn::nfd::LINK_TYPE_AD_HOC) {
+        continue;
+      }
+    
+      pendingDownstreams.emplace(&inRecord.getFace(), inRecord.getEndpointId(), inRecord.getInterest().shared_from_this());
     }
+  }
+
+  for (const auto& pendingDownstream : pendingDownstreams) {
+    auto interest = std::get<2>(pendingDownstream);
+    if(!interest->matchesData(data)){ // can't match index & length
+        uint32_t index = interest->getContentIndex();
+        uint16_t length = interest->getContentLength();
+
+        Data tempData(data);
+        tempData.setContentIndex(index);
+        tempData.setContentLength(length);
+
+        size_t offset = index - data.getContentIndex();
+        const ndn::Block& content = data.getContent();
+        tempData.setContent(content.value() + offset, static_cast<size_t>(length));
+
+        this->sendData(pitEntry, tempData, FaceEndpoint(*std::get<0>(pendingDownstream), std::get<1>(pendingDownstream)));
+    }
+    else{
+        this->sendData(pitEntry, data, FaceEndpoint(*std::get<0>(pendingDownstream), std::get<1>(pendingDownstream)));
+    }
+  }
 }
 
 void

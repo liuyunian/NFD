@@ -24,8 +24,10 @@
  */
 
 #include "pit.hpp"
+#include "common/logger.hpp"
 
 namespace nfd {
+NFD_LOG_INIT(Pit);
 namespace pit {
 
 static inline bool
@@ -76,6 +78,7 @@ Pit::findOrInsert(const Interest& interest, bool allowInsert)
     return {nullptr, true};
   }
 
+  NFD_LOG_DEBUG("create new pit entry and insert interest=" << interest.getName());
   auto entry = make_shared<Entry>(interest);
   nte->insertPitEntry(entry);
   ++m_nItems;
@@ -90,8 +93,12 @@ Pit::findAllDataMatches(const Data& data) const
   DataMatchResult matches;
   for (const auto& nte : ntMatches) {
     for (const auto& pitEntry : nte.getPitEntries()) {
-      if (pitEntry->getInterest().matchesData(data))
+      if (pitEntry->getInterest().matchesData(data)){
+        NFD_LOG_DEBUG("data can match interest");
         matches.emplace_back(pitEntry);
+      }
+
+    //   NFD_LOG_DEBUG("data cant match interest");
     }
   }
 

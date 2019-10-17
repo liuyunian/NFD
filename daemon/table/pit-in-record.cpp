@@ -32,8 +32,6 @@ void
 InRecord::update(const Interest& interest)
 {
   FaceRecord::update(interest);
-  m_contentIndex = interest.getContentIndex();
-  m_contentLength = interest.getContentLength();
   m_interest = interest.shared_from_this();
 }
 

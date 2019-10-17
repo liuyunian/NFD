@@ -272,6 +272,8 @@ Forwarder::onIncomingData(const FaceEndpoint& ingress, const Data& data)
     // set PIT expiry timer to now
     this->setExpiryTimer(pitEntry, 0_ms);
 
+    NFD_LOG_DEBUG("onIncomingData 213213");
+
     // trigger strategy: after receive Data
     this->dispatchToStrategy(*pitEntry,
       [&] (fw::Strategy& strategy) { strategy.afterReceiveData(pitEntry, ingress, data); });
@@ -333,58 +335,65 @@ Forwarder::onIncomingData(const FaceEndpoint& ingress, const Data& data)
     //   this->onOutgoingData(data, FaceEndpoint(*pendingDownstream.first, pendingDownstream.second));
     // }
 
+    std::set<std::tuple<Face*, EndpointId, std::shared_ptr<const Interest>>> pendingDownstreams;
+
     auto now = time::steady_clock::now();
 
     for (const auto& pitEntry : pitMatches) {
-        NFD_LOG_DEBUG("onIncomingData matching=" << pitEntry->getName());
+      NFD_LOG_DEBUG("onIncomingData matching=" << pitEntry->getName());
 
-        // remember pending downstreams
-        for (const pit::InRecord& inRecord : pitEntry->getInRecords()) {
-            if (inRecord.getExpiry() > now) {
-                if (inRecord.getFace().getId() == ingress.face.getId() &&
-                    inRecord.getEndpointId() == ingress.endpoint &&
-                    inRecord.getFace().getLinkType() != ndn::nfd::LINK_TYPE_AD_HOC) {
-                    continue;
-                }
-
-                if(!inRecord.getInterest().matchesData(data)){ // can't match index & length
-                    uint32_t index = inRecord.getContentIndex();
-                    uint16_t length = inRecord.getContentLength();
-
-                    Data tempData(data);
-                    tempData.setContentIndex(index);
-                    tempData.setContentLength(length);
-
-                    size_t offset = index - pitEntry->getInterest().getContentIndex();
-                    const ndn::Block& content = data.getContent();
-                    tempData.setContent(content.value() + offset, static_cast<size_t>(length));
-
-                    // goto outgoing Data pipeline
-                    this->onOutgoingData(tempData, FaceEndpoint(inRecord.getFace(), inRecord.getEndpointId()));
-                }
-                else{
-                    this->onOutgoingData(data, FaceEndpoint(inRecord.getFace(), inRecord.getEndpointId()));
-                }
-            }
+      // remember pending downstreams
+      for (const pit::InRecord& inRecord : pitEntry->getInRecords()) {
+        if (inRecord.getExpiry() > now) {
+          pendingDownstreams.emplace(&inRecord.getFace(), inRecord.getEndpointId(), inRecord.getInterest().shared_from_this());
         }
+      }
 
-        // set PIT expiry timer to now
-        this->setExpiryTimer(pitEntry, 0_ms);
+      // set PIT expiry timer to now
+      this->setExpiryTimer(pitEntry, 0_ms);
 
-        // invoke PIT satisfy callback
-        this->dispatchToStrategy(*pitEntry,
-            [&] (fw::Strategy& strategy) { strategy.beforeSatisfyInterest(pitEntry, ingress, data); });
+      // invoke PIT satisfy callback
+      this->dispatchToStrategy(*pitEntry,
+        [&] (fw::Strategy& strategy) { strategy.beforeSatisfyInterest(pitEntry, ingress, data); });
 
-        // mark PIT satisfied
-        pitEntry->isSatisfied = true;
-        pitEntry->dataFreshnessPeriod = data.getFreshnessPeriod();
+      // mark PIT satisfied
+      pitEntry->isSatisfied = true;
+      pitEntry->dataFreshnessPeriod = data.getFreshnessPeriod();
 
-        // Dead Nonce List insert if necessary (for out-record of inFace)
-        this->insertDeadNonceList(*pitEntry, &ingress.face);
+      // Dead Nonce List insert if necessary (for out-record of inFace)
+      this->insertDeadNonceList(*pitEntry, &ingress.face);
 
-        // clear PIT entry's in and out records
-        pitEntry->clearInRecords();
-        pitEntry->deleteOutRecord(ingress.face, ingress.endpoint);
+      // clear PIT entry's in and out records
+      pitEntry->clearInRecords();
+      pitEntry->deleteOutRecord(ingress.face, ingress.endpoint);
+    }
+
+    // foreach pending downstream
+    for (const auto& pendingDownstream : pendingDownstreams) {
+      if (std::get<0>(pendingDownstream)->getId() == ingress.face.getId() &&
+          std::get<1>(pendingDownstream) == ingress.endpoint &&
+          std::get<0>(pendingDownstream)->getLinkType() != ndn::nfd::LINK_TYPE_AD_HOC) {
+          continue;
+      }
+
+        auto interest = std::get<2>(pendingDownstream);
+        if(!interest->matchesData(data)){ // can't match index & length
+            uint32_t index = interest->getContentIndex();
+            uint16_t length = interest->getContentLength();
+
+            Data tempData(data);
+            tempData.setContentIndex(index);
+            tempData.setContentLength(length);
+
+            size_t offset = index - data.getContentIndex();
+            const ndn::Block& content = data.getContent();
+            tempData.setContent(content.value() + offset, static_cast<size_t>(length));
+
+            this->onOutgoingData(tempData, FaceEndpoint(*std::get<0>(pendingDownstream), std::get<1>(pendingDownstream)));
+        }
+        else{
+            this->onOutgoingData(data, FaceEndpoint(*std::get<0>(pendingDownstream), std::get<1>(pendingDownstream)));
+        }
     }
   }
 }
@@ -419,7 +428,6 @@ Forwarder::onOutgoingData(const Data& data, FaceEndpoint egress)
     // (drop)
     return;
   }
-
   // TODO traffic manager
 
   // send Data
