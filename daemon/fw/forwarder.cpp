@@ -60,7 +60,7 @@ void
 Forwarder::onIncomingInterest(const FaceEndpoint& ingress, const Interest& interest)
 {
   // receive Interest
-  NFD_LOG_DEBUG("onIncomingInterest in=" << ingress << " interest=" << interest.getName());
+  NFD_LOG_DEBUG("onIncomingInterest in=" << ingress << " interest=" << interest.getName() << "index=" << interest.getContentIndex() << "length = " << interest.getContentLength());
   interest.setTag(make_shared<lp::IncomingFaceIdTag>(ingress.face.getId()));
   ++m_counters.nInInterests;
 
@@ -141,7 +141,7 @@ void
 Forwarder::onContentStoreMiss(const FaceEndpoint& ingress,
                               const shared_ptr<pit::Entry>& pitEntry, const Interest& interest)
 {
-  NFD_LOG_DEBUG("onContentStoreMiss interest=" << interest.getName());
+  NFD_LOG_DEBUG("onContentStoreMiss interest=" << interest.getName() << " index=" << interest.getContentIndex() << " length = " << interest.getContentLength());
   ++m_counters.nCsMisses;
 
   // insert in-record
@@ -182,7 +182,7 @@ void
 Forwarder::onContentStoreHit(const FaceEndpoint& ingress, const shared_ptr<pit::Entry>& pitEntry,
                              const Interest& interest, const Data& data)
 {
-  NFD_LOG_DEBUG("onContentStoreHit interest=" << interest.getName());
+  NFD_LOG_DEBUG("onContentStoreHit interest=" << interest.getName() << " index=" << interest.getContentIndex() << " length = " << interest.getContentLength());
   ++m_counters.nCsHits;
 
   data.setTag(make_shared<lp::IncomingFaceIdTag>(face::FACEID_CONTENT_STORE));
@@ -203,7 +203,7 @@ void
 Forwarder::onOutgoingInterest(const shared_ptr<pit::Entry>& pitEntry,
                               const FaceEndpoint& egress, const Interest& interest)
 {
-  NFD_LOG_DEBUG("onOutgoingInterest out=" << egress << " interest=" << pitEntry->getName());
+  NFD_LOG_DEBUG("onOutgoingInterest out=" << egress << " interest=" << pitEntry->getName() << "index=" << interest.getContentIndex() << "length = " << interest.getContentLength());
 
   // insert out-record
   pitEntry->insertOrUpdateOutRecord(egress.face, egress.endpoint, interest);

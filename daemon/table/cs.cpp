@@ -190,12 +190,14 @@ Cs::find(const Interest& interest,
     uint16_t length = interest.getContentLength();
 
     Entry& entry = const_cast<Entry&>(*it);
-    Data* data = entry.match(index, length);
+    shared_ptr<Data> data = entry.match(index, length);
     if(data == nullptr){
         NFD_LOG_DEBUG("  no-match");
         missCallback(interest);
         return;
     }
+
+    NFD_LOG_DEBUG("data != nullptrs");
 
     m_policy->beforeUse(it);
     hitCallback(interest, *data);

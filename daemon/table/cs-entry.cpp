@@ -57,23 +57,26 @@ void Entry::insert(shared_ptr<const Data> data){
     }
 }
 
-Data* Entry::match(uint32_t index, uint16_t len) {
+shared_ptr<Data> Entry::match(uint32_t index, uint16_t len) {
 	if (m_contentMap.empty()){
 		return nullptr;
 	}
 
     ContentRange range(index, len);
     auto iter = m_contentMap.lower_bound(range);
-	if(m_contentMap.size() == 1 && iter != m_contentMap.end()){
-		return nullptr;
+	if(iter == m_contentMap.end()){
+		--iter;
 	}
-
-    --iter;
+    
+    std::cout << iter->first.get_lowerBound() << ", " << iter->first.get_upperBound() << std::endl;
+    std::cout << range.get_lowerBound() << ", " << range.get_upperBound() << std::endl;
 	if(!iter->first.contain(range)){
 		return nullptr;
 	}
 
-    Data * data = new Data(m_name);
+    auto data = make_shared<Data>(m_name);
+    data->setContentIndex(index);
+    data->setContentLength(len);
     data->setFreshnessPeriod(m_freshnessPeriod);
     size_t pos = index - iter->first.get_lowerBound();
     data->setContent(reinterpret_cast<const uint8_t *>(&iter->second.at(pos)), len);

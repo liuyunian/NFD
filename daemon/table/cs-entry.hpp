@@ -34,7 +34,7 @@ public:
 
     void insert(shared_ptr<const Data> data);
 
-    Data* match(uint32_t index, uint16_t len);
+    shared_ptr<Data> match(uint32_t index, uint16_t len);
 
     bool operator<(const Entry& other) const;
 
